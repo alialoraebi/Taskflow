@@ -1,28 +1,25 @@
-import Task from '../models/task.js';
-import Project from '../models/project.js';
+import {
+  createTask as createTaskService,
+  getTasksByProject as getTasksByProjectService,
+  updateTask as updateTaskService,
+  updateTaskStatus as updateTaskStatusService,
+  deleteTask as deleteTaskService,
+} from '../services/taskService.js';
 
 export const createTask = async (req, res) => {
   try {
-    if (!req.body.projectId) {
-      return res.status(400).json({ message: 'projectId is required' });
-    }
-
-    const task = await Task.create(req.body);
-
-    await Project.findByIdAndUpdate(task.projectId, { $addToSet: { relatedTasks: task._id } });
+    const task = await createTaskService(req.body);
 
     return res.status(201).json({ task });
   } catch (error) {
     console.error('createTask error:', error.message);
-    return res.status(500).json({ message: error.message });
+    return res.status(400).json({ message: error.message });
   }
 };
 
 export const getTasksByProject = async (req, res) => {
   try {
-    const tasks = await Task.find({ projectId: req.params.projectId })
-      .populate('assignedTo', 'name email role')
-      .populate('comments.author', 'name email');
+    const tasks = await getTasksByProjectService(req.params.projectId, req.query);
 
     return res.json({ tasks });
   } catch (error) {
@@ -33,16 +30,7 @@ export const getTasksByProject = async (req, res) => {
 
 export const updateTaskStatus = async (req, res) => {
   try {
-    const { status } = req.body;
-
-    if (!status) {
-      return res.status(400).json({ message: 'Status is required' });
-    }
-
-    const task = await Task.findByIdAndUpdate(req.params.id, { status }, {
-      new: true,
-      runValidators: true,
-    });
+    const task = await updateTaskStatusService(req.params.id, req.body.status);
 
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
@@ -51,19 +39,14 @@ export const updateTaskStatus = async (req, res) => {
     return res.json({ task });
   } catch (error) {
     console.error('updateTaskStatus error:', error.message);
-    return res.status(500).json({ message: error.message });
+    return res.status(400).json({ message: error.message });
   }
 };
 
 
 export const updateTask = async (req, res) => {
   try {
-    const updates = { ...req.body };
-    delete updates.projectId;
-    const task = await Task.findByIdAndUpdate(req.params.id, updates, {
-      new: true,
-      runValidators: true,
-    });
+    const task = await updateTaskService(req.params.id, req.body);
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
@@ -75,13 +58,11 @@ export const updateTask = async (req, res) => {
 };
 export const deleteTask = async (req, res) => {
   try {
-    const task = await Task.findByIdAndDelete(req.params.id);
+    const task = await deleteTaskService(req.params.id);
 
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
-
-    await Project.findByIdAndUpdate(task.projectId, { $pull: { relatedTasks: task._id } });
 
     return res.json({ message: 'Task deleted successfully' });
   } catch (error) {

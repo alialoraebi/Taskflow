@@ -13,6 +13,9 @@ const envPath = join(__dirname, '.env');
 dotenv.config({ path: envPath });
 
 import { connectDatabase } from './src/config/database.js';
+import projectRoutes from './src/routes/projectRoutes.js';
+import taskRoutes from './src/routes/taskRoutes.js';
+import userRoutes from './src/routes/userRoutes.js';
 
 const app = express();
 
@@ -39,6 +42,10 @@ app.options(/.*/, cors());
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use(morgan('dev'));
+
+app.use('/api/projects', projectRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/users', userRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });

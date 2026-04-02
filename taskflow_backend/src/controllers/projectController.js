@@ -1,9 +1,14 @@
-import Project from '../models/project.js';
-import Task from '../models/task.js';
+import {
+  createProject as createProjectService,
+  getProjects as getProjectsService,
+  getProjectById as getProjectByIdService,
+  updateProject as updateProjectService,
+  deleteProject as deleteProjectService,
+} from '../services/projectService.js';
 
 export const createProject = async (req, res) => {
   try {
-    const project = await Project.create(req.body);
+    const project = await createProjectService(req.body);
     return res.status(201).json({ project });
   } catch (error) {
     console.error('createProject error:', error.message);
@@ -14,9 +19,7 @@ export const createProject = async (req, res) => {
 export const getProjects = async (req, res) => {
   try {
     console.log('📋 getProjects called by user:', req.user?.email || 'unknown');
-    const projects = await Project.find()
-      .populate('assignedUsers', 'name email role')
-      .populate('relatedTasks');
+    const projects = await getProjectsService();
 
     console.log(`✅ Found ${projects.length} projects`);
     return res.json({ projects });
@@ -29,9 +32,7 @@ export const getProjects = async (req, res) => {
 
 export const getProjectById = async (req, res) => {
   try {
-    const project = await Project.findById(req.params.id)
-      .populate('assignedUsers', 'name email role')
-      .populate('relatedTasks');
+    const project = await getProjectByIdService(req.params.id);
 
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
@@ -46,10 +47,7 @@ export const getProjectById = async (req, res) => {
 
 export const updateProject = async (req, res) => {
   try {
-    const project = await Project.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    const project = await updateProjectService(req.params.id, req.body);
 
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
@@ -64,12 +62,9 @@ export const updateProject = async (req, res) => {
 
 export const deleteProject = async (req, res) => {
   try {
-    // First, delete all tasks associated with this project
-    await Task.deleteMany({ projectId: req.params.id });
-    console.log(`🗑️ Deleted tasks associated with project ${req.params.id}`);
+    const project = await deleteProjectService(req.params.id);
 
-    // Then delete the project itself
-    const project = await Project.findByIdAndDelete(req.params.id);
+    console.log(`🗑️ Deleted tasks associated with project ${req.params.id}`);
 
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
