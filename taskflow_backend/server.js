@@ -16,6 +16,7 @@ import { connectDatabase } from './src/config/database.js';
 import projectRoutes from './src/routes/projectRoutes.js';
 import taskRoutes from './src/routes/taskRoutes.js';
 import userRoutes from './src/routes/userRoutes.js';
+import { fetchHolidays } from './src/utils/holidayApi.js';
 
 const app = express();
 
@@ -46,6 +47,21 @@ app.use(morgan('dev'));
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/users', userRoutes);
+
+app.get('/api/holidays', async (req, res) => {
+  try {
+    const holidays = await fetchHolidays({
+      year: req.query.year,
+      month: req.query.month,
+      day: req.query.day,
+    });
+
+    return res.json({ holidays });
+  } catch (error) {
+    console.error('Holiday API error:', error.message);
+    return res.status(502).json({ message: error.message });
+  }
+});
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
