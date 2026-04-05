@@ -129,6 +129,7 @@ export const api = {
   // User endpoints
   login: (credentials) => request('/users/login', { method: 'POST', body: credentials }),
   register: (payload) => request('/users/register', { method: 'POST', body: payload }),
+  updateCurrentUser: (body, token) => request('/users/me', { method: 'PUT', body, token }),
   getUsers: (token) => request('/users', { token }),
   updateUser: (id, body, token) => request(`/users/${id}`, { method: 'PUT', body, token }),
   deleteUser: (id, token) => request(`/users/${id}`, { method: 'DELETE', token }),

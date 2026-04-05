@@ -3,6 +3,7 @@ import Modal from '../shared/Modal';
 import { api } from '../../services/api';
 import CalendarDayCell from './CalendarDayCell';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';
+import { useHolidayRegion } from '../../context/HolidayRegionContext';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
@@ -35,6 +36,7 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
   const [showInfoTooltip, setShowInfoTooltip] = useState(false);
   const loadedMonthKeys = useRef(new Set());
   const monthRequestsInFlight = useRef(new Map());
+  const { holidayRegion, holidayRegionOptions } = useHolidayRegion();
 
   const canReschedule = Boolean(token) && !isViewer;
 
@@ -181,6 +183,17 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
       }, 0),
     [currentMonthKey, holidaysByDay],
   );
+  const holidayRegionLabel = useMemo(
+    () => holidayRegionOptions.find((option) => option.value === holidayRegion)?.label || holidayRegion,
+    [holidayRegion, holidayRegionOptions],
+  );
+
+  useEffect(() => {
+    loadedMonthKeys.current.clear();
+    monthRequestsInFlight.current.clear();
+    setHolidaysByDay({});
+    setLoadingHolidayMonthKey(null);
+  }, [holidayRegion]);
 
   useEffect(() => {
     let cancelled = false;
@@ -198,7 +211,7 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
 
       let monthPromise = monthRequestsInFlight.current.get(monthKey);
       if (!monthPromise) {
-        monthPromise = api.getHolidaysForMonth({ year, month }, token);
+        monthPromise = api.getHolidaysForMonth({ year, month, country: holidayRegion }, token);
         monthRequestsInFlight.current.set(monthKey, monthPromise);
       }
 
@@ -241,7 +254,7 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
     return () => {
       cancelled = true;
     };
-  }, [dedupeHolidays, token, viewDate]);
+  }, [dedupeHolidays, holidayRegion, token, viewDate]);
 
   const currentMonthLabel = viewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
   const todayKey = formatDayKey(new Date());
@@ -378,6 +391,10 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
                       <p className="mt-1 leading-relaxed">Select "All Projects" or filter by a specific project.</p>
                     </div>
                     <div className="border-t border-slate-200 pt-3 dark:border-slate-700">
+                      <p className="font-semibold text-slate-700 dark:text-slate-200">Holiday region</p>
+                      <p className="mt-1 leading-relaxed">Currently showing public holidays for {holidayRegionLabel}.</p>
+                    </div>
+                    <div className="border-t border-slate-200 pt-3 dark:border-slate-700">
                       <p className="font-semibold text-slate-700 dark:text-slate-200">Interaction</p>
                       <p className="mt-1 leading-relaxed">
                         Click a day or hover to inspect its tasks.
@@ -448,7 +465,7 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
 
       {!feedback && !loadingHolidayMonthKey && loadedMonthKeys.current.has(currentMonthKey) && currentMonthHolidayCount === 0 && (
         <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
-          No public holidays fall in {currentMonthLabel}.
+          No public holidays fall in {currentMonthLabel} for {holidayRegionLabel}.
         </div>
       )}
 

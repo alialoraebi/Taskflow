@@ -55,6 +55,7 @@ app.get('/api/holidays', async (req, res) => {
     res.set('Expires', '0');
 
     const holidays = await fetchHolidays({
+      country: req.query.country,
       year: req.query.year,
       month: req.query.month,
       day: req.query.day,
@@ -74,6 +75,7 @@ app.get('/api/holidays/month', async (req, res) => {
     res.set('Expires', '0');
 
     const holidaysByDay = await fetchHolidaysForMonth({
+      country: req.query.country,
       year: req.query.year,
       month: req.query.month,
     });

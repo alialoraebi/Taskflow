@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/user.js';
+import { normalizeHolidayCountry } from '../utils/holidayApi.js';
 
 const signToken = (userId, role) => {
   const secret = process.env.JWT_SECRET;
@@ -15,7 +16,7 @@ const signToken = (userId, role) => {
 
 export const registerUser = async (req, res) => {
   try {
-    const { username, email, password, role } = req.body;
+    const { name, username, email, password, role, holidayRegion } = req.body;
 
     if (!username || !email || !password) {
       return res.status(400).json({ message: 'Username, email, and password are required' });
@@ -29,9 +30,11 @@ export const registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
+      name: typeof name === 'string' ? name.trim() : '',
       username,
       email,
       password: hashedPassword,
+      holidayRegion: normalizeHolidayCountry(holidayRegion),
       role,
     });
 
@@ -82,6 +85,94 @@ export const getAllUsers = async (req, res) => {
   } catch (error) {
     console.error('❌ getAllUsers error:', error.message);
     console.error('Stack:', error.stack);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateCurrentUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.user?.id).select('+password');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const nextName = typeof req.body.name === 'string' ? req.body.name.trim() : undefined;
+    const nextUsername = typeof req.body.username === 'string' ? req.body.username.trim() : undefined;
+    const nextEmail = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : undefined;
+    const nextHolidayRegion = req.body.holidayRegion !== undefined ? normalizeHolidayCountry(req.body.holidayRegion) : undefined;
+    const currentPassword = typeof req.body.currentPassword === 'string' ? req.body.currentPassword : '';
+    const newPassword = typeof req.body.newPassword === 'string'
+      ? req.body.newPassword
+      : typeof req.body.password === 'string'
+        ? req.body.password
+        : undefined;
+
+    if (nextName !== undefined) {
+      user.name = nextName;
+    }
+
+    if (nextUsername !== undefined) {
+      if (!nextUsername) {
+        return res.status(400).json({ message: 'Username is required' });
+      }
+
+      const existingUsername = await User.findOne({
+        username: nextUsername,
+        _id: { $ne: user._id },
+      });
+
+      if (existingUsername) {
+        return res.status(409).json({ message: 'User with this username already exists' });
+      }
+
+      user.username = nextUsername;
+    }
+
+    if (nextEmail !== undefined) {
+      if (!nextEmail) {
+        return res.status(400).json({ message: 'Email is required' });
+      }
+
+      const existingEmail = await User.findOne({
+        email: nextEmail,
+        _id: { $ne: user._id },
+      });
+
+      if (existingEmail) {
+        return res.status(409).json({ message: 'User with this email already exists' });
+      }
+
+      user.email = nextEmail;
+    }
+
+    if (nextHolidayRegion !== undefined) {
+      user.holidayRegion = nextHolidayRegion;
+    }
+
+    if (newPassword !== undefined) {
+      if (!currentPassword) {
+        return res.status(400).json({ message: 'Current password is required' });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: 'New password must be at least 6 characters long' });
+      }
+
+      const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: 'Current password is incorrect' });
+      }
+
+      user.password = await bcrypt.hash(newPassword, 10);
+    }
+
+    await user.save();
+
+    return res.json({ user: user.toJSON() });
+  } catch (error) {
+    console.error('updateCurrentUser error:', error.message);
     return res.status(500).json({ message: error.message });
   }
 };
