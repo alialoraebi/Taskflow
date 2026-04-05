@@ -28,7 +28,9 @@ export const createTask = async (taskData, ownerId) => {
     throw new Error('Project not found or access denied');
   }
 
+  // Factory pattern centralizes task construction and normalization.
   const taskPayload = TaskFactory.create({ ...taskData, owner: ownerId });
+  // Command pattern encapsulates the task creation mutation.
   const command = new CreateTaskCommand(taskPayload);
   return command.execute();
 };
@@ -43,6 +45,7 @@ export const getTasksByProject = async (projectId, filters = {}, ownerId) => {
     return [];
   }
 
+  // Specification pattern composes reusable task filters into a query.
   const query = buildTaskQuery({
     projectId,
     status: filters.status,

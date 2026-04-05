@@ -86,6 +86,27 @@ const DashboardPage = () => {
     [projects],
   );
 
+  const overdueTasks = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return tasks
+      .filter((task) => {
+        if (String(task.status || '').toLowerCase() === 'completed') {
+          return false;
+        }
+
+        const dueDate = task.dueDate ? new Date(task.dueDate) : null;
+        if (!dueDate || Number.isNaN(dueDate.getTime())) {
+          return false;
+        }
+
+        dueDate.setHours(0, 0, 0, 0);
+        return dueDate < today;
+      })
+      .sort((left, right) => new Date(left.dueDate) - new Date(right.dueDate));
+  }, [tasks]);
+
   const totalTaskPages = Math.ceil(tasks.length / tasksPerPage);
   const paginatedTasks = useMemo(() => {
     const startIndex = (currentTaskPage - 1) * tasksPerPage;
@@ -104,6 +125,12 @@ const DashboardPage = () => {
       value: tasks.length,
       helper: `${tasks.filter((task) => task.status !== 'Completed').length} pending`,
       accent: 'emerald',
+    },
+    {
+      label: 'Overdue',
+      value: overdueTasks.length,
+      helper: overdueTasks.length ? 'Requires attention' : 'No late tasks',
+      accent: 'rose',
     },
   ];
 
@@ -135,7 +162,7 @@ const DashboardPage = () => {
     <div className="space-y-8">
       <ErrorMessage message={error} />
 
-      <section className="grid gap-4 md:grid-cols-2">
+      <section className="grid gap-4 md:grid-cols-3">
         {stats.map((stat) => (
           <StatCard key={stat.label} {...stat} />
         ))}
@@ -143,6 +170,46 @@ const DashboardPage = () => {
 
       <section>
         <TimelineCalendar projects={projects} tasks={tasks} token={token} isViewer={isViewer} />
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800/50">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Tasks</p>
+            <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">Overdue tasks</h2>
+          </div>
+          <span className="text-xs text-slate-500 dark:text-slate-400">{overdueTasks.length} total</span>
+        </div>
+
+        <div className="mt-6 space-y-3">
+          {overdueTasks.slice(0, 5).map((task) => (
+            <div
+              key={`overdue-${task._id}`}
+              className="rounded-2xl border border-rose-200 bg-rose-50 p-4 transition hover:bg-rose-100/70 dark:border-rose-500/30 dark:bg-rose-500/10 dark:hover:bg-rose-500/15"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">{task.title}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{task.projectName}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/tasks', { state: { projectId: task.projectId, taskId: task._id } })}
+                  className="rounded-full border border-rose-300 px-3 py-1 text-xs font-medium text-rose-700 transition hover:bg-white/70 dark:border-rose-400/40 dark:text-rose-100 dark:hover:bg-rose-500/10"
+                >
+                  View task
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-rose-700 dark:text-rose-200">
+                Due {formatDate(task.dueDate)} · Status {task.status}
+              </p>
+            </div>
+          ))}
+
+          {!overdueTasks.length && (
+            <EmptyState description="No overdue tasks right now." />
+          )}
+        </div>
       </section>
 
       <section>

@@ -9,7 +9,7 @@ import EmptyState from '../shared/EmptyState';
 import Badge from '../shared/Badge';
 import { formatDate } from '../../utils/format';
 
-const columns = ['Todo', 'In Progress', 'Review', 'Completed', 'Cancelled'];
+const columns = ['Todo', 'In Progress', 'Review', 'Completed', 'Blocked'];
 
 const TasksPage = () => {
   const { token, user } = useAuth();

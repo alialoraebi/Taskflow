@@ -13,6 +13,7 @@ export const createTask = async (req, res) => {
     }
 
     const task = await createTaskService(req.body, req.user.id);
+    console.log(`📝 Created task ${task._id} for project ${task.projectId} by ${req.user.email || req.user.id}`);
 
     return res.status(201).json({ task });
   } catch (error) {
@@ -53,6 +54,8 @@ export const updateTaskStatus = async (req, res) => {
       return res.status(404).json({ message: 'Task not found' });
     }
 
+    console.log(`📝 Updated task status ${task._id} -> ${task.status} by ${req.user.email || req.user.id}`);
+
     return res.json({ task });
   } catch (error) {
     console.error('updateTaskStatus error:', error.message);
@@ -71,6 +74,9 @@ export const updateTask = async (req, res) => {
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
+
+    console.log(`📝 Updated task ${task._id} by ${req.user.email || req.user.id}`);
+
     return res.json({ task });
   } catch (error) {
     console.error('updateTask error:', error.message);
@@ -88,6 +94,8 @@ export const deleteTask = async (req, res) => {
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
+
+    console.log(`🗑️ Deleted task ${task._id} by ${req.user.email || req.user.id}`);
 
     return res.json({ message: 'Task deleted successfully' });
   } catch (error) {

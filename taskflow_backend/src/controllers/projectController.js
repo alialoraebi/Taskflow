@@ -13,6 +13,7 @@ export const createProject = async (req, res) => {
     }
 
     const project = await createProjectService(req.body, req.user.id);
+    console.log(`📁 Created project ${project._id} by ${req.user.email || req.user.id}`);
     return res.status(201).json({ project });
   } catch (error) {
     console.error('createProject error:', error.message);
@@ -69,6 +70,8 @@ export const updateProject = async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
+    console.log(`📁 Updated project ${project._id} by ${req.user.email || req.user.id}`);
+
     return res.json({ project });
   } catch (error) {
     console.error('updateProject error:', error.message);
@@ -84,13 +87,11 @@ export const deleteProject = async (req, res) => {
 
     const project = await deleteProjectService(req.params.id, req.user.id);
 
-    console.log(`🗑️ Deleted tasks associated with project ${req.params.id}`);
-
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    console.log(`🗑️ Deleted project ${req.params.id}`);
+    console.log(`🗑️ Deleted project ${req.params.id} and its related tasks by ${req.user.email || req.user.id}`);
     return res.json({ message: 'Project and associated tasks deleted successfully' });
   } catch (error) {
     console.error('deleteProject error:', error.message);

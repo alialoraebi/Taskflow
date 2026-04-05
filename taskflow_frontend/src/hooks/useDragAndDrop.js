@@ -132,17 +132,17 @@ export const useDragAndDrop = ({
   const checkDayWithinProjectTimeline = (day, task) => {
     if (!task) return true;
 
-    return enrichedProjects.some((project) => {
-      const taskBelongsToProject =
-        task.projectKey === project.projectKey ||
-        task.projectId === project._id ||
-        task.project?._id === project._id;
+    const matchingProject = enrichedProjects.find((project) =>
+      task.projectKey === project.projectKey ||
+      task.projectId === project._id ||
+      task.project?._id === project._id,
+    );
 
-      if (taskBelongsToProject && project.start && project.end) {
-        return day >= project.start && day <= project.end;
-      }
+    if (!matchingProject || !matchingProject.start || !matchingProject.end) {
       return true;
-    });
+    }
+
+    return day >= matchingProject.start && day <= matchingProject.end;
   };
 
   return {
