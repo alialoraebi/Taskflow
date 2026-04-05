@@ -9,13 +9,40 @@ import {
 } from '../patterns/TaskCommand.js';
 import { buildTaskQuery } from '../patterns/TaskSpecification.js';
 
-export const createTask = async (taskData) => {
-  const taskPayload = TaskFactory.create(taskData);
+const ensureProjectOwnership = async (projectId, ownerId) => {
+  if (!projectId || !ownerId) {
+    return false;
+  }
+
+  const project = await Project.exists({ _id: projectId, owner: ownerId });
+  return Boolean(project);
+};
+
+export const createTask = async (taskData, ownerId) => {
+  if (!ownerId) {
+    throw new Error('Unauthorized');
+  }
+
+  const projectOwned = await ensureProjectOwnership(taskData.projectId, ownerId);
+  if (!projectOwned) {
+    throw new Error('Project not found or access denied');
+  }
+
+  const taskPayload = TaskFactory.create({ ...taskData, owner: ownerId });
   const command = new CreateTaskCommand(taskPayload);
   return command.execute();
 };
 
-export const getTasksByProject = async (projectId, filters = {}) => {
+export const getTasksByProject = async (projectId, filters = {}, ownerId) => {
+  if (!ownerId) {
+    throw new Error('Unauthorized');
+  }
+
+  const projectOwned = await ensureProjectOwnership(projectId, ownerId);
+  if (!projectOwned) {
+    return [];
+  }
+
   const query = buildTaskQuery({
     projectId,
     status: filters.status,
@@ -24,33 +51,63 @@ export const getTasksByProject = async (projectId, filters = {}) => {
     dueAfter: filters.dueAfter,
   });
 
+  query.owner = ownerId;
+
   return Task.find(query)
-    .populate('assignedTo', 'name email role')
-    .populate('comments.author', 'name email');
+    .populate('assignedTo', 'username email role')
+    .populate('comments.author', 'username email');
 };
 
-export const updateTask = async (taskId, updates) => {
+export const updateTask = async (taskId, updates, ownerId) => {
+  if (!ownerId) {
+    throw new Error('Unauthorized');
+  }
+
+  const task = await Task.findOne({ _id: taskId, owner: ownerId });
+  if (!task) {
+    return null;
+  }
+
   const sanitizedUpdates = { ...updates };
   delete sanitizedUpdates.projectId;
+  delete sanitizedUpdates.owner;
 
   const command = new UpdateTaskCommand(taskId, sanitizedUpdates);
   return command.execute();
 };
 
-export const updateTaskStatus = async (taskId, status) => {
+export const updateTaskStatus = async (taskId, status, ownerId) => {
+  if (!ownerId) {
+    throw new Error('Unauthorized');
+  }
+
   if (!status) {
     throw new Error('Status is required');
+  }
+
+  const task = await Task.findOne({ _id: taskId, owner: ownerId });
+  if (!task) {
+    return null;
   }
 
   const command = new UpdateTaskStatusCommand(taskId, status);
   return command.execute();
 };
 
-export const deleteTask = async (taskId) => {
+export const deleteTask = async (taskId, ownerId) => {
+  if (!ownerId) {
+    throw new Error('Unauthorized');
+  }
+
+  const task = await Task.findOne({ _id: taskId, owner: ownerId });
+  if (!task) {
+    return null;
+  }
+
   const command = new DeleteTaskCommand(taskId);
   return command.execute();
 };
 
-export const ensureProjectExists = async (projectId) => {
-  return Project.exists({ _id: projectId });
+export const ensureProjectExists = async (projectId, ownerId) => {
+  return Project.exists({ _id: projectId, owner: ownerId });
 };

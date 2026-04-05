@@ -142,7 +142,7 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
     return grouped;
   }, [visibleTasks]);
 
-  const calendarDays = useMemo(() => buildCalendar(viewDate), [viewDate]);
+  const calendarDays = useMemo(() => buildCalendar(viewDate).flat(), [viewDate]);
 
   const currentMonthLabel = viewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
   const todayKey = formatDayKey(new Date());
@@ -358,18 +358,23 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
         </div>
 
         <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-          {calendarDays.map((day) => {
+          {calendarDays.map((day, index) => {
+            if (!day || Number.isNaN(new Date(day).getTime())) {
+              return <div key={`empty-${index}`} className="min-h-[84px] rounded-xl" />;
+            }
+
             const key = formatDayKey(day);
             const isCurrentMonth = day.getMonth() === viewDate.getMonth();
             const tasksOnDay = tasksByDay[key] || [];
             const isDropTarget = dropTargetKey === key;
             const hasTasks = tasksOnDay.length > 0;
 
-            const isDayWithinProjectTimeline = dragDropHandlers.checkDayWithinProjectTimeline(
-              day,
-              draggingTask,
-              enrichedProjects,
-            );
+            const isDayWithinProjectTimeline =
+              dragDropHandlers.checkDayWithinProjectTimeline?.(
+                day,
+                draggingTask,
+                enrichedProjects,
+              ) ?? true;
 
             return (
               <CalendarDayCell
@@ -385,12 +390,16 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
                 updatingTaskId={updatingTaskId}
                 renderProjectsBackground={renderProjectsBackground}
                 handleDayClick={handleDayClick}
-                handleDayBoxDragStart={(e) => dragDropHandlers.handleDayBoxDragStart(e, tasksOnDay, hasTasks)}
-                handleTaskDragEnd={dragDropHandlers.handleTaskDragEnd}
-                handleDayDragOver={dragDropHandlers.handleDayDragOver}
-                handleTaskDragStart={dragDropHandlers.handleTaskDragStart}
+                handleDayBoxDragStart={(e) =>
+                  dragDropHandlers.handleDayBoxDragStart?.(e, tasksOnDay, hasTasks)
+                }
+                handleTaskDragEnd={dragDropHandlers.handleTaskDragEnd || (() => {})}
+                handleDayDragOver={dragDropHandlers.handleDayDragOver || (() => {})}
+                handleTaskDragStart={dragDropHandlers.handleTaskDragStart || (() => {})}
                 onDropTargetChange={setDropTargetKey}
-                onDrop={(e) => dragDropHandlers.handleDayDrop(e, day, isDayWithinProjectTimeline)}
+                onDrop={(e) =>
+                  dragDropHandlers.handleDayDrop?.(e, day, isDayWithinProjectTimeline)
+                }
               />
             );
           })}

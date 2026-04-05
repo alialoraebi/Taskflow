@@ -66,6 +66,7 @@ export const api = {
 
   // Task endpoints
   getTasks: (token) => request('/tasks', { token }),
+  getTasksByProject: (projectId, token) => request(`/tasks?project=${projectId}`, { token }),
   getTask: (id, token) => request(`/tasks/${id}`, { token }),
   createTask: (body, token) => request('/tasks', { method: 'POST', body, token }),
   updateTask: (id, body, token) => request(`/tasks/${id}`, { method: 'PUT', body, token }),

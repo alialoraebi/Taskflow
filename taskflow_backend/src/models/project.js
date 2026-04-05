@@ -4,6 +4,7 @@ const projectStatus = ['Planned', 'In Progress', 'Completed', 'On Hold', 'Cancel
 
 const projectSchema = new Schema(
   {
+    owner: { type: Types.ObjectId, ref: 'User', index: true },
     name: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
     status: { type: String, enum: projectStatus, default: 'Planned' },

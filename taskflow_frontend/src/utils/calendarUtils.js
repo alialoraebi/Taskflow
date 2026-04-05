@@ -15,7 +15,12 @@ export const monthNames = [
 
 export const ALL_PROJECTS_FILTER = 'ALL';
 
-export const formatDayKey = (date) => date.toISOString().split('T')[0];
+export const formatDayKey = (date) => {
+  if (!date) return null;
+  const d = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().split('T')[0];
+};
 
 export const hashToIndex = (str) => {
   let hash = 0;
@@ -35,14 +40,27 @@ export const toColorWithAlpha = (hexColor, alpha = 0.2) => {
 };
 
 export const normalizeDate = (date) => {
+  if (!date) return null;
   const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return null;
   d.setHours(0, 0, 0, 0);
   return d;
 };
 
-export const buildCalendar = (year, month) => {
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
+export const buildCalendar = (yearOrDate, month) => {
+  const baseDate =
+    yearOrDate instanceof Date
+      ? yearOrDate
+      : new Date(yearOrDate, month, 1);
+
+  if (Number.isNaN(baseDate.getTime())) {
+    return [];
+  }
+
+  const year = baseDate.getFullYear();
+  const monthIndex = baseDate.getMonth();
+  const firstDay = new Date(year, monthIndex, 1);
+  const lastDay = new Date(year, monthIndex + 1, 0);
   const daysInMonth = lastDay.getDate();
   const startingDayOfWeek = firstDay.getDay();
 
@@ -55,7 +73,7 @@ export const buildCalendar = (year, month) => {
 
   for (let day = 1; day <= daysInMonth; day++) {
     const dayIndex = (startingDayOfWeek + day - 1) % 7;
-    week[dayIndex] = new Date(year, month, day);
+    week[dayIndex] = new Date(year, monthIndex, day);
 
     if (dayIndex === 6 || day === daysInMonth) {
       weeks.push([...week]);

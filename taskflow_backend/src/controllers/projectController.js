@@ -8,7 +8,11 @@ import {
 
 export const createProject = async (req, res) => {
   try {
-    const project = await createProjectService(req.body);
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const project = await createProjectService(req.body, req.user.id);
     return res.status(201).json({ project });
   } catch (error) {
     console.error('createProject error:', error.message);
@@ -18,8 +22,12 @@ export const createProject = async (req, res) => {
 
 export const getProjects = async (req, res) => {
   try {
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
     console.log('📋 getProjects called by user:', req.user?.email || 'unknown');
-    const projects = await getProjectsService();
+    const projects = await getProjectsService(req.user.id);
 
     console.log(`✅ Found ${projects.length} projects`);
     return res.json({ projects });
@@ -32,7 +40,11 @@ export const getProjects = async (req, res) => {
 
 export const getProjectById = async (req, res) => {
   try {
-    const project = await getProjectByIdService(req.params.id);
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const project = await getProjectByIdService(req.params.id, req.user.id);
 
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
@@ -47,7 +59,11 @@ export const getProjectById = async (req, res) => {
 
 export const updateProject = async (req, res) => {
   try {
-    const project = await updateProjectService(req.params.id, req.body);
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const project = await updateProjectService(req.params.id, req.body, req.user.id);
 
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
@@ -62,7 +78,11 @@ export const updateProject = async (req, res) => {
 
 export const deleteProject = async (req, res) => {
   try {
-    const project = await deleteProjectService(req.params.id);
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const project = await deleteProjectService(req.params.id, req.user.id);
 
     console.log(`🗑️ Deleted tasks associated with project ${req.params.id}`);
 

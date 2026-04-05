@@ -55,6 +55,7 @@ class TaskFactory {
     }
 
     return {
+      owner: taskData.owner,
       projectId: taskData.projectId,
       title,
       description: normalizeString(taskData.description),

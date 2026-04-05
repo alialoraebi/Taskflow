@@ -6,12 +6,17 @@ import {
   updateTask,
   deleteTask,
 } from '../controllers/taskController.js';
+import { authMiddleware, blockViewer } from '../middleware/authMiddleware.js';
 const router = Router();
 
-router.post('/', createTask);
+router.use(authMiddleware);
+
+router.post('/', blockViewer, createTask);
+router.get('/', getTasksByProject);
 router.get('/project/:projectId', getTasksByProject);
-router.put('/:id', updateTask);
-router.patch('/:id', updateTaskStatus);
-router.delete('/:id', deleteTask);
+router.put('/:id', blockViewer, updateTask);
+router.patch('/:id/status', blockViewer, updateTaskStatus);
+router.patch('/:id', blockViewer, updateTaskStatus);
+router.delete('/:id', blockViewer, deleteTask);
 
 export default router;

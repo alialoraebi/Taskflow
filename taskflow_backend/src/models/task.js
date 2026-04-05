@@ -14,6 +14,7 @@ const commentSchema = new Schema(
 
 const taskSchema = new Schema(
   {
+    owner: { type: Types.ObjectId, ref: 'User', index: true },
     projectId: { type: Types.ObjectId, ref: 'Project', required: true },
     title: { type: String, required: true, trim: true },
     description: { type: String, trim: true },

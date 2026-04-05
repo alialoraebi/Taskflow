@@ -8,7 +8,11 @@ import {
 
 export const createTask = async (req, res) => {
   try {
-    const task = await createTaskService(req.body);
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const task = await createTaskService(req.body, req.user.id);
 
     return res.status(201).json({ task });
   } catch (error) {
@@ -19,7 +23,16 @@ export const createTask = async (req, res) => {
 
 export const getTasksByProject = async (req, res) => {
   try {
-    const tasks = await getTasksByProjectService(req.params.projectId, req.query);
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const projectId = req.params.projectId || req.query.project;
+    if (!projectId) {
+      return res.status(400).json({ message: 'projectId is required' });
+    }
+
+    const tasks = await getTasksByProjectService(projectId, req.query, req.user.id);
 
     return res.json({ tasks });
   } catch (error) {
@@ -30,7 +43,11 @@ export const getTasksByProject = async (req, res) => {
 
 export const updateTaskStatus = async (req, res) => {
   try {
-    const task = await updateTaskStatusService(req.params.id, req.body.status);
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const task = await updateTaskStatusService(req.params.id, req.body.status, req.user.id);
 
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
@@ -46,7 +63,11 @@ export const updateTaskStatus = async (req, res) => {
 
 export const updateTask = async (req, res) => {
   try {
-    const task = await updateTaskService(req.params.id, req.body);
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const task = await updateTaskService(req.params.id, req.body, req.user.id);
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
@@ -58,7 +79,11 @@ export const updateTask = async (req, res) => {
 };
 export const deleteTask = async (req, res) => {
   try {
-    const task = await deleteTaskService(req.params.id);
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const task = await deleteTaskService(req.params.id, req.user.id);
 
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
