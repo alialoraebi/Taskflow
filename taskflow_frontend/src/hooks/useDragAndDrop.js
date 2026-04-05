@@ -129,14 +129,14 @@ export const useDragAndDrop = ({
     setTouchStartKey(null);
   };
 
-  const checkDayWithinProjectTimeline = (day, draggingTask, enrichedProjects) => {
-    if (!draggingTask) return true;
+  const checkDayWithinProjectTimeline = (day, task) => {
+    if (!task) return true;
 
     return enrichedProjects.some((project) => {
       const taskBelongsToProject =
-        draggingTask.projectKey === project.projectKey ||
-        draggingTask.projectId === project._id ||
-        draggingTask.project?._id === project._id;
+        task.projectKey === project.projectKey ||
+        task.projectId === project._id ||
+        task.project?._id === project._id;
 
       if (taskBelongsToProject && project.start && project.end) {
         return day >= project.start && day <= project.end;

@@ -499,7 +499,6 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
               dragDropHandlers.checkDayWithinProjectTimeline?.(
                 day,
                 draggingTask,
-                enrichedProjects,
               ) ?? true;
 
             return (

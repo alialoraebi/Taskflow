@@ -31,7 +31,6 @@ const CalendarDayCell = ({
   dropTargetKey,
   longPressTimer,
   calendarDays,
-  enrichedProjects,
   checkDayWithinProjectTimeline,
   handleTaskReschedule,
   onSetFeedback,
@@ -216,7 +215,7 @@ const CalendarDayCell = ({
                   event.stopPropagation();
                   if (dropTargetKey && dropTargetKey !== key) {
                     const targetDay = calendarDays.find((d) => formatDayKey(d) === dropTargetKey);
-                    const isDayWithinTimeline = checkDayWithinProjectTimeline(targetDay, draggingTask, enrichedProjects);
+                    const isDayWithinTimeline = checkDayWithinProjectTimeline(targetDay, draggingTask);
                     if (targetDay && isDayWithinTimeline) {
                       handleTaskReschedule(draggingTask, targetDay);
                     } else if (targetDay && !isDayWithinTimeline) {
