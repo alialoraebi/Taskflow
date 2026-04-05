@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { api } from '../services/api';
+import { api, clearHolidayBrowserCache } from '../services/api';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
 
@@ -67,6 +67,7 @@ export const HolidayRegionProvider = ({ children }) => {
         return;
       }
 
+      clearHolidayBrowserCache();
       setHolidayRegionState(nextRegion);
       updateStoredUser((currentUser) =>
         currentUser ? { ...currentUser, holidayRegion: nextRegion } : currentUser,
@@ -83,6 +84,7 @@ export const HolidayRegionProvider = ({ children }) => {
           updateStoredUser(response.user);
         }
       } catch (error) {
+        clearHolidayBrowserCache();
         setHolidayRegionState(previousRegion);
         updateStoredUser((currentUser) =>
           currentUser ? { ...currentUser, holidayRegion: previousRegion } : currentUser,

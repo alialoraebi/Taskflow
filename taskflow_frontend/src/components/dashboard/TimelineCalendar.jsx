@@ -187,6 +187,10 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
     () => holidayRegionOptions.find((option) => option.value === holidayRegion)?.label || holidayRegion,
     [holidayRegion, holidayRegionOptions],
   );
+  const currentRegionMonthKey = useMemo(
+    () => `${holidayRegion}:${currentMonthKey}`,
+    [currentMonthKey, holidayRegion],
+  );
 
   useEffect(() => {
     loadedMonthKeys.current.clear();
@@ -201,7 +205,7 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
     const loadMonthHolidays = async () => {
       const year = viewDate.getFullYear();
       const month = viewDate.getMonth() + 1;
-      const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+      const monthKey = `${holidayRegion}:${year}-${String(month).padStart(2, '0')}`;
 
       if (loadedMonthKeys.current.has(monthKey)) {
         return;
@@ -463,7 +467,7 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
         </div>
       )}
 
-      {!feedback && !loadingHolidayMonthKey && loadedMonthKeys.current.has(currentMonthKey) && currentMonthHolidayCount === 0 && (
+      {!feedback && !loadingHolidayMonthKey && loadedMonthKeys.current.has(currentRegionMonthKey) && currentMonthHolidayCount === 0 && (
         <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
           No public holidays fall in {currentMonthLabel} for {holidayRegionLabel}.
         </div>
@@ -542,7 +546,7 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
       >
         <div className="space-y-4">
           {(focusedDay?.date &&
-              `${focusedDay.date.getFullYear()}-${String(focusedDay.date.getMonth() + 1).padStart(2, '0')}` ===
+              `${holidayRegion}:${focusedDay.date.getFullYear()}-${String(focusedDay.date.getMonth() + 1).padStart(2, '0')}` ===
                 loadingHolidayMonthKey) && (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
               Loading holidays...
@@ -565,7 +569,7 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
           {!activeDayTasks.length &&
             !activeDayHolidays.length &&
             (!focusedDay?.date ||
-              `${focusedDay.date.getFullYear()}-${String(focusedDay.date.getMonth() + 1).padStart(2, '0')}` !==
+              `${holidayRegion}:${focusedDay.date.getFullYear()}-${String(focusedDay.date.getMonth() + 1).padStart(2, '0')}` !==
                 loadingHolidayMonthKey) && (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
               No tasks or holidays on this day.

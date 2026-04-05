@@ -10,6 +10,18 @@ export const setTokenExpirationHandler = (handler) => {
   tokenExpirationHandler = handler;
 };
 
+export const clearHolidayBrowserCache = () => {
+  holidayBrowserCache.clear();
+
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return;
+  }
+
+  Object.keys(window.localStorage)
+    .filter((key) => key.startsWith(HOLIDAY_BROWSER_CACHE_PREFIX))
+    .forEach((key) => window.localStorage.removeItem(key));
+};
+
 const getHolidayBrowserCacheKey = (path, params = {}) => {
   const query = new URLSearchParams(params).toString();
   return `${HOLIDAY_BROWSER_CACHE_PREFIX}:${API_BASE_URL}${path}?${query}`;
