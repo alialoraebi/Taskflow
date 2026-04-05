@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Modal from '../shared/Modal';
 import { api } from '../../services/api';
 import CalendarDayCell from './CalendarDayCell';
@@ -22,6 +22,8 @@ import {
 const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
   const [viewDate, setViewDate] = useState(() => new Date());
   const [calendarTasks, setCalendarTasks] = useState(tasks);
+  const [holidaysByDay, setHolidaysByDay] = useState({});
+  const [loadingHolidayMonthKey, setLoadingHolidayMonthKey] = useState(null);
   const [selectedProjectId, setSelectedProjectId] = useState(ALL_PROJECTS_FILTER);
   const [focusedDay, setFocusedDay] = useState(null);
   const [draggingTask, setDraggingTask] = useState(null);
@@ -31,8 +33,33 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
   const [touchStartKey, setTouchStartKey] = useState(null);
   const [longPressTimer, setLongPressTimer] = useState(null);
   const [showInfoTooltip, setShowInfoTooltip] = useState(false);
+  const loadedMonthKeys = useRef(new Set());
+  const monthRequestsInFlight = useRef(new Map());
 
   const canReschedule = Boolean(token) && !isViewer;
+
+  const dedupeHolidays = useCallback((rawHolidays) => {
+    if (!Array.isArray(rawHolidays)) {
+      return [];
+    }
+
+    const seen = new Set();
+    return rawHolidays.filter((holiday) => {
+      const name = String(holiday?.name || '').trim();
+      const date = String(holiday?.date || '').trim();
+      if (!name) {
+        return false;
+      }
+
+      const key = `${name.toLowerCase()}::${date}`;
+      if (seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    });
+  }, []);
 
   useEffect(() => {
     setCalendarTasks(tasks);
@@ -143,6 +170,78 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
   }, [visibleTasks]);
 
   const calendarDays = useMemo(() => buildCalendar(viewDate).flat(), [viewDate]);
+  const currentMonthKey = useMemo(
+    () => `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}`,
+    [viewDate],
+  );
+  const currentMonthHolidayCount = useMemo(
+    () =>
+      Object.entries(holidaysByDay).reduce((count, [dayKey, holidays]) => {
+        return dayKey.startsWith(currentMonthKey) ? count + holidays.length : count;
+      }, 0),
+    [currentMonthKey, holidaysByDay],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadMonthHolidays = async () => {
+      const year = viewDate.getFullYear();
+      const month = viewDate.getMonth() + 1;
+      const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+
+      if (loadedMonthKeys.current.has(monthKey)) {
+        return;
+      }
+
+      setLoadingHolidayMonthKey(monthKey);
+
+      let monthPromise = monthRequestsInFlight.current.get(monthKey);
+      if (!monthPromise) {
+        monthPromise = api.getHolidaysForMonth({ year, month }, token);
+        monthRequestsInFlight.current.set(monthKey, monthPromise);
+      }
+
+      try {
+        const payload = await monthPromise;
+        const holidaysByDayPayload = payload?.holidaysByDay || {};
+
+        if (cancelled) {
+          return;
+        }
+
+        const normalized = Object.entries(holidaysByDayPayload).reduce((acc, [dayKey, holidays]) => {
+          acc[dayKey] = dedupeHolidays(holidays);
+          return acc;
+        }, {});
+
+        setHolidaysByDay((prev) => ({
+          ...prev,
+          ...normalized,
+        }));
+        loadedMonthKeys.current.add(monthKey);
+      } catch (error) {
+        const isRateLimit = error?.message?.includes('429') || error?.message?.includes('too_many_requests');
+        if (isRateLimit) {
+          setFeedback({
+            type: 'error',
+            message: 'Holiday API rate limit reached while preloading this month.',
+          });
+        }
+      } finally {
+        if (monthRequestsInFlight.current.get(monthKey) === monthPromise) {
+          monthRequestsInFlight.current.delete(monthKey);
+        }
+        setLoadingHolidayMonthKey((current) => (current === monthKey ? null : current));
+      }
+    };
+
+    loadMonthHolidays();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dedupeHolidays, token, viewDate]);
 
   const currentMonthLabel = viewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
   const todayKey = formatDayKey(new Date());
@@ -152,16 +251,13 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
   };
 
   const handleDayClick = (day) => {
+    if (!(day instanceof Date) || Number.isNaN(day.getTime())) return;
+
     const key = formatDayKey(day);
-    if (!tasksByDay[key]?.length) return;
+    if (!key) return;
+
     setFocusedDay({ key, date: day });
   };
-
-  useEffect(() => {
-    if (focusedDay?.key && !tasksByDay[focusedDay.key]?.length) {
-      setFocusedDay(null);
-    }
-  }, [focusedDay, tasksByDay]);
 
   const handleTaskReschedule = useCallback(
     async (task, targetDay) => {
@@ -247,6 +343,7 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
   );
 
   const activeDayTasks = focusedDay?.key ? tasksByDay[focusedDay.key] || [] : [];
+  const activeDayHolidays = focusedDay?.key ? holidaysByDay[focusedDay.key] || [] : [];
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800/50">
@@ -348,6 +445,13 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
           {feedback.message}
         </div>
       )}
+
+      {!feedback && !loadingHolidayMonthKey && loadedMonthKeys.current.has(currentMonthKey) && currentMonthHolidayCount === 0 && (
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+          No public holidays fall in {currentMonthLabel}.
+        </div>
+      )}
+
       <div className="mt-6 space-y-2">
         <div className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 sm:gap-2 sm:text-xs">
           {daysShort.map((day) => (
@@ -366,6 +470,7 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
             const key = formatDayKey(day);
             const isCurrentMonth = day.getMonth() === viewDate.getMonth();
             const tasksOnDay = tasksByDay[key] || [];
+            const holidaysOnDay = holidaysByDay[key] || [];
             const isDropTarget = dropTargetKey === key;
             const hasTasks = tasksOnDay.length > 0;
 
@@ -381,6 +486,7 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
                 key={key}
                 day={day}
                 tasksOnDay={tasksOnDay}
+                holidaysOnDay={holidaysOnDay}
                 isCurrentMonth={isCurrentMonth}
                 isDropTarget={isDropTarget}
                 isDayWithinProjectTimeline={isDayWithinProjectTimeline}
@@ -413,11 +519,42 @@ const TimelineCalendar = ({ projects, tasks, token, isViewer = false }) => {
       )}
 
       <Modal
-        isOpen={Boolean(focusedDay && activeDayTasks.length)}
+        isOpen={Boolean(focusedDay)}
         onClose={() => setFocusedDay(null)}
         title={focusedDay ? `Tasks • ${formatFriendlyDate(focusedDay.date)}` : 'Tasks'}
       >
         <div className="space-y-4">
+          {(focusedDay?.date &&
+              `${focusedDay.date.getFullYear()}-${String(focusedDay.date.getMonth() + 1).padStart(2, '0')}` ===
+                loadingHolidayMonthKey) && (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+              Loading holidays...
+            </div>
+          )}
+
+          {!!activeDayHolidays.length && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-200">
+                Holidays
+              </p>
+              <ul className="mt-2 space-y-1 text-sm text-amber-800 dark:text-amber-100">
+                {activeDayHolidays.map((holiday) => (
+                  <li key={`${holiday.name}-${holiday.date || holiday.name}`}>{holiday.name}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {!activeDayTasks.length &&
+            !activeDayHolidays.length &&
+            (!focusedDay?.date ||
+              `${focusedDay.date.getFullYear()}-${String(focusedDay.date.getMonth() + 1).padStart(2, '0')}` !==
+                loadingHolidayMonthKey) && (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+              No tasks or holidays on this day.
+            </div>
+          )}
+
           {activeDayTasks.map((task) => {
             const due = normalizeDate(task.dueDate);
             return (

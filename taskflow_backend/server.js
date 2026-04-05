@@ -16,7 +16,7 @@ import { connectDatabase } from './src/config/database.js';
 import projectRoutes from './src/routes/projectRoutes.js';
 import taskRoutes from './src/routes/taskRoutes.js';
 import userRoutes from './src/routes/userRoutes.js';
-import { fetchHolidays } from './src/utils/holidayApi.js';
+import { fetchHolidays, fetchHolidaysForMonth } from './src/utils/holidayApi.js';
 
 const app = express();
 
@@ -50,6 +50,10 @@ app.use('/api/users', userRoutes);
 
 app.get('/api/holidays', async (req, res) => {
   try {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+
     const holidays = await fetchHolidays({
       year: req.query.year,
       month: req.query.month,
@@ -59,6 +63,24 @@ app.get('/api/holidays', async (req, res) => {
     return res.json({ holidays });
   } catch (error) {
     console.error('Holiday API error:', error.message);
+    return res.status(502).json({ message: error.message });
+  }
+});
+
+app.get('/api/holidays/month', async (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+
+    const holidaysByDay = await fetchHolidaysForMonth({
+      year: req.query.year,
+      month: req.query.month,
+    });
+
+    return res.json({ holidaysByDay });
+  } catch (error) {
+    console.error('Holiday API month error:', error.message);
     return res.status(502).json({ message: error.message });
   }
 });

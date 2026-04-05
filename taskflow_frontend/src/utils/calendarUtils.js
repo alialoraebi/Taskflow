@@ -19,7 +19,12 @@ export const formatDayKey = (date) => {
   if (!date) return null;
   const d = date instanceof Date ? date : new Date(date);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString().split('T')[0];
+
+  // Use local date parts to avoid UTC day-shift issues.
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 export const hashToIndex = (str) => {

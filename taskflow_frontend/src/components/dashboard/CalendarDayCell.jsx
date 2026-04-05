@@ -3,6 +3,7 @@ import { formatDayKey, formatFriendlyDate, normalizeDate, toColorWithAlpha } fro
 const CalendarDayCell = ({
   day,
   tasksOnDay,
+  holidaysOnDay = [],
   isCurrentMonth,
   isDropTarget,
   isDayWithinProjectTimeline,
@@ -37,6 +38,8 @@ const CalendarDayCell = ({
 }) => {
   const key = formatDayKey(day);
   const hasTasks = tasksOnDay.length > 0;
+  const hasHolidays = holidaysOnDay.length > 0;
+  const isInteractive = Boolean(isCurrentMonth);
 
   // Mobile: Apply distinct task color as background overlay
   const mobileTaskStyle = hasTasks
@@ -70,12 +73,12 @@ const CalendarDayCell = ({
           : 'border-slate-100 bg-slate-50/40 text-slate-400 dark:border-slate-800/50 dark:bg-slate-900/20'
       } ${isDropTarget && isDayWithinProjectTimeline ? 'border-indigo-400 ring-2 ring-indigo-200 dark:border-indigo-300 dark:ring-indigo-500/30' : ''} ${isDropTarget && !isDayWithinProjectTimeline ? 'border-rose-400 ring-2 ring-rose-200 dark:border-rose-300 dark:ring-rose-500/30' : ''} ${key === todayKey ? 'ring-2 ring-indigo-500/20' : ''} ${draggingTask && touchStartKey === key ? 'scale-105 opacity-50' : ''}`}
       style={mobileTaskStyle}
-      role={tasksOnDay.length ? 'button' : undefined}
-      tabIndex={tasksOnDay.length ? 0 : -1}
-      aria-label={`View ${tasksOnDay.length || 'no'} tasks scheduled for ${formatFriendlyDate(day)}`}
+      role={isInteractive ? 'button' : undefined}
+      tabIndex={isInteractive ? 0 : -1}
+      aria-label={`View ${tasksOnDay.length || 'no'} tasks and ${holidaysOnDay.length || 'no'} holidays scheduled for ${formatFriendlyDate(day)}`}
       onClick={() => handleDayClick(day)}
       onKeyDown={(event) => {
-        if (!tasksOnDay.length) return;
+        if (!isInteractive) return;
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           handleDayClick(day);
@@ -113,6 +116,12 @@ const CalendarDayCell = ({
             {day.getDate()}
           </span>
 
+          {hasHolidays && (
+            <span className="ml-1 inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-500/20 dark:text-amber-200 sm:text-[9px]">
+              Holiday
+            </span>
+          )}
+
           {/* Mobile: Show task count badge */}
           {!!tasksOnDay.length && (
             <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-800 text-[8px] font-bold text-white shadow-sm sm:hidden dark:bg-slate-200 dark:text-slate-800">
@@ -127,6 +136,19 @@ const CalendarDayCell = ({
             </span>
           )}
         </div>
+
+        {hasHolidays && (
+          <div className="mt-1 shrink-0">
+            <p className="truncate text-[9px] font-semibold text-amber-700 dark:text-amber-200 sm:text-[10px]">
+              {holidaysOnDay[0].name}
+            </p>
+            {holidaysOnDay.length > 1 && (
+              <p className="text-[8px] text-amber-600/90 dark:text-amber-300/90 sm:text-[9px]">
+                +{holidaysOnDay.length - 1} more
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Show task pills on both mobile and desktop */}
         <div className="relative z-10 mt-1 flex-1">
@@ -224,19 +246,34 @@ const CalendarDayCell = ({
       </div>
 
       {/* Desktop only: Hover popover */}
-      {!!tasksOnDay.length && (
+      {!!(tasksOnDay.length || holidaysOnDay.length) && (
         <div className="pointer-events-none absolute left-0 right-0 top-full z-20 hidden translate-y-2 rounded-xl border border-slate-200 bg-white p-3 text-[11px] shadow-2xl sm:group-hover:block dark:border-slate-700 dark:bg-slate-900 sm:left-2 sm:right-2">
-          <p className="mb-2 font-semibold text-slate-900 dark:text-white">
-            {tasksOnDay.length} scheduled task{tasksOnDay.length === 1 ? '' : 's'}
-          </p>
-          <ul className="space-y-1 text-slate-600 dark:text-slate-300">
-            {tasksOnDay.slice(0, 3).map((task) => (
-              <li key={`${task._id}-hover`} className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: task.color }} />
-                <span className="truncate">{task.title}</span>
-              </li>
-            ))}
-          </ul>
+          {!!holidaysOnDay.length && (
+            <div className="mb-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-200">
+                Holidays
+              </p>
+              <p className="mt-1 text-[10px] font-medium text-amber-700 dark:text-amber-200">
+                {holidaysOnDay.map((holiday) => holiday.name).join(', ')}
+              </p>
+            </div>
+          )}
+
+          {!!tasksOnDay.length && (
+            <>
+              <p className="mb-2 font-semibold text-slate-900 dark:text-white">
+                {tasksOnDay.length} scheduled task{tasksOnDay.length === 1 ? '' : 's'}
+              </p>
+              <ul className="space-y-1 text-slate-600 dark:text-slate-300">
+                {tasksOnDay.slice(0, 3).map((task) => (
+                  <li key={`${task._id}-hover`} className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: task.color }} />
+                    <span className="truncate">{task.title}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </div>
       )}
     </div>
