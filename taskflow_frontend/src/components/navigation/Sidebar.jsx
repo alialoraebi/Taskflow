@@ -23,11 +23,12 @@ const Sidebar = ({ isOpen, onClose, desktopVisible = true, onDesktopClose }) => 
       } ${desktopVisible ? 'lg:translate-x-0' : 'lg:-translate-x-full'}`}
     >
       <div className="flex h-full flex-col overflow-y-auto px-5 py-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center select-none">
-            <div className="ml-3">
-              <p className="text-xs uppercase text-indigo-600 dark:text-indigo-400">TaskFlow</p>
-            </div>
+        <div className="flex items-center justify-center">
+          <div className="select-none">
+            <h1 className="text-xl font-extrabold tracking-tight">
+              <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent dark:from-indigo-400 dark:to-purple-400">Task</span>
+              <span className="text-gray-800 dark:text-white">Flow</span>
+            </h1>
           </div>
         </div>
         <div className="absolute right-3 top-6 flex gap-2">
