@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Modal from '../shared/Modal';
 import ErrorMessage from '../shared/ErrorMessage';
 
 const UpdateProjectModal = ({ isOpen, onClose, project, onSave, loading }) => {
-  const [form, setForm] = useState(project || { name: '', description: '', startDate: '', endDate: '', status: 'In Progress' });
+  const [form, setForm] = useState({ name: '', description: '', startDate: '', endDate: '', status: 'In Progress' });
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (project) {
+      setForm(project);
+    }
+  }, [project]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

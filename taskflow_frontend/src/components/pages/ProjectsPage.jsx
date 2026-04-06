@@ -322,8 +322,8 @@ const ProjectsPage = () => {
         isOpen={updateModalOpen}
         onClose={handleCloseUpdateModal}
         project={projectToUpdate}
-        onUpdate={handleUpdateProject}
-        isLoading={updateLoading}
+        onSave={handleUpdateProject}
+        loading={updateLoading}
       />
     </div>
   );
